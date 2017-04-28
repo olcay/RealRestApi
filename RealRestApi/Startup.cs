@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace RealRestApi
 {
@@ -27,7 +24,10 @@ namespace RealRestApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<ApiContext>(options => options.UseInMemoryDatabase());
+
             // Add framework services.
+            services.AddRouting(opt => opt.LowercaseUrls = true);
             services.AddMvc();
         }
 
@@ -37,7 +37,28 @@ namespace RealRestApi
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 
-            app.UseMvc();
+            var context = app.ApplicationServices.GetService<ApiContext>();
+            AddTestData(context);
+
+            app.UseMvc(opt => opt.MapRoute("default", "{controller=root}/{id?}"));
+        }
+
+        private static void AddTestData(ApiContext context)
+        {
+            context.Users.Add(new Models.DbUser()
+            {
+                Id = 17,
+                FirstName = "Luke",
+                LastName = "Skywalker"
+            });
+            context.Users.Add(new Models.DbUser()
+            {
+                Id = 18,
+                FirstName = "Han",
+                LastName = "Solo"
+            });
+
+            context.SaveChanges();
         }
     }
 }
