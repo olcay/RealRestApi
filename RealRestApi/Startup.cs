@@ -1,9 +1,15 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using System.Linq;
+using System.Reflection;
+using RealRestApi.Filters;
+using RealRestApi.Models;
+using Mapster;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace RealRestApi
 {
@@ -13,7 +19,7 @@ namespace RealRestApi
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
             Configuration = builder.Build();
@@ -21,42 +27,52 @@ namespace RealRestApi
 
         public IConfigurationRoot Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<ApiContext>(options => options.UseInMemoryDatabase());
+            // Use an in-memory database for quick development and testing
+            services.AddDbContext<BeautifulContext>(opt => opt.UseInMemoryDatabase());
 
-            // Add framework services.
-            services.AddRouting(opt => opt.LowercaseUrls = true);
-            services.AddMvc();
+            // Save the default paged collection parameters to the DI container
+            // so we can easily retrieve them in a controller
+            services.AddSingleton(Options.Create(new PagedCollectionParameters
+            {
+                Limit = 25,
+                Offset = 0
+            }));
+
+            services.AddMvc(options =>
+            {
+                options.Filters.Add(typeof(LinkRewritingFilter));
+                options.Filters.Add(typeof(JsonExceptionFilter));
+            });
+
+            // Add POCO mapping configurations
+            var typeAdapterConfig = new TypeAdapterConfig();
+            typeAdapterConfig.Scan(typeof(Startup).GetTypeInfo().Assembly);
+            services.AddSingleton(typeAdapterConfig);
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 
-            var context = app.ApplicationServices.GetService<ApiContext>();
-            AddTestData(context);
+            var context = app.ApplicationServices.GetService<BeautifulContext>();
+            SeedContextWithTestData(context);
 
-            app.UseMvc(opt => opt.MapRoute("default", "{controller=root}/{id?}"));
+            app.UseMvc(opt =>
+            {
+                opt.MapRoute("default", "{controller}/{id?}/{link?}");
+            });
         }
 
-        private static void AddTestData(ApiContext context)
+        private static void SeedContextWithTestData(BeautifulContext context)
         {
-            context.Users.Add(new Models.DbUser()
-            {
-                Id = 17,
-                FirstName = "Luke",
-                LastName = "Skywalker"
-            });
-            context.Users.Add(new Models.DbUser()
-            {
-                Id = 18,
-                FirstName = "Han",
-                LastName = "Solo"
-            });
+            var fakeUsers = new TestData.TestUsers(26);
+            var fakePosts = new TestData.TestPosts(100, fakeUsers.Data.Select(x => x.Id).ToArray());
+
+            fakeUsers.Seed(context.Users);
+            fakePosts.Seed(context.Posts);
 
             context.SaveChanges();
         }

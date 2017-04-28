@@ -1,6 +1,6 @@
 ﻿namespace RealRestApi.Models
 {
-    public class IonCollection<T> : IonResource
+    public class Collection<T> : Resource
     {
         public T[] Items { get; set; }
     }

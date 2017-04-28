@@ -5,9 +5,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="TestData\" />
+    <Folder Include="Queries\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Lorem.DNX.NET" Version="1.0.30-beta" />
+    <PackageReference Include="Mapster" Version="2.6.1" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="1.1.2" />
