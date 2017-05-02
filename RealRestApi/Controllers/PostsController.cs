@@ -51,6 +51,8 @@ namespace RealRestApi.Controllers
                 : new ObjectResult(post);
         }
 
+        [HttpPost]
+        [Produces(typeof(Post))]
         public async Task<IActionResult> Post([FromBody] PostCreateModel model)
         {
             if (!ModelState.IsValid)

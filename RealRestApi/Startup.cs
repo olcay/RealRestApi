@@ -46,6 +46,8 @@ namespace RealRestApi
                 options.Filters.Add(typeof(JsonExceptionFilter));
             });
 
+            services.AddSwaggerGen();
+
             // Add POCO mapping configurations
             var typeAdapterConfig = new TypeAdapterConfig();
             typeAdapterConfig.Scan(typeof(Startup).GetTypeInfo().Assembly);
@@ -64,6 +66,9 @@ namespace RealRestApi
             {
                 opt.MapRoute("default", "{controller}/{id?}/{link?}");
             });
+
+            app.UseSwagger();
+            app.UseSwaggerUi();
         }
 
         private static void SeedContextWithTestData(BeautifulContext context)
